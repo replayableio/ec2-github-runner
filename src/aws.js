@@ -66,7 +66,7 @@ function buildUserDataScript(githubRegistrationToken, label) {
         `echo "${config.input.preRunnerScript}" > pre-runner-script.sh`,
         'source pre-runner-script.sh',
         'case $(uname -m) in aarch64) ARCH="arm64" ;; amd64|x86_64) ARCH="v${runnerVersion}/actions-runner-linux-${RUNNER_ARCH}-${runnerVersion}.tar.gz',
-        `tar xzf ./actions-runner-linux-${RUNNER_ARCH}-${runnerVersion}.tar.gz`,
+        `tar xzf ./actions-runner-linux-\${RUNNER_ARCH}-${runnerVersion}.tar.gz`,
         `./config.sh --url https://github.com/${config.githubContext.owner}/${config.githubContext.repo} --token ${githubRegistrationToken} --labels ${label}`,
         './run.sh',
         'EOF',
