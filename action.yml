@@ -29,9 +29,9 @@ inputs:
     description: >-
       Base OS type of the EC2 image (AMI). The new runner needs to be configured based on OS and architecture:
         - 'windows'
-        - 'linux'
+        - 'mac'
     required: false
-    default: linux
+    default: windows
   subnet-id:
     description: >-
       VPC Subnet Id. The subnet should belong to the same VPC as the specified security group.
