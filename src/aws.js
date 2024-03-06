@@ -176,7 +176,7 @@ async function waitForInstanceRunning(ec2InstanceId) {
   };
 
   try {
-    await waitUntilInstanceRunning({ client, maxWaitTime: 30, minDelay: 3 }, params);
+    await waitUntilInstanceRunning({ client, maxWaitTime: 90, minDelay: 3 }, params);
     core.info(`AWS EC2 instance ${ec2InstanceId} is up and running`);
   } catch (error) {
     core.error(`AWS EC2 instance ${ec2InstanceId} initialization error`);
