@@ -22,6 +22,10 @@ function buildUserDataScript(githubRegistrationToken, label) {
       // to be pre-installed in the AMI, so we simply cd into that directory and then start the runner
       return [
         '<powershell>',
+        `Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force`,
+        `Install-module -name DisplaySettings  -Force`,
+        `Set-DisplayResolution -Width 1920 -Height 1080 -Force`,
+        `Get-DisplayResolution`,
         `cd "${config.input.runnerHomeDir}"`,
         `echo "${config.input.preRunnerScript}" > pre-runner-script.ps1`,
         '.\\pre-runner-script.ps1',
@@ -33,6 +37,10 @@ function buildUserDataScript(githubRegistrationToken, label) {
     } else {
       return [
         '<powershell>',
+        `Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force`,
+        `Install-module -name DisplaySettings  -Force`,
+        `Set-DisplayResolution -Width 1920 -Height 1080 -Force`,
+        `Get-DisplayResolution`,
         'mkdir C:\\actions-runner; cd C:\\actions-runner',
         `echo "${config.input.preRunnerScript}" > pre-runner-script.ps1`,
         '.\\pre-runner-script.ps1',
