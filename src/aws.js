@@ -49,15 +49,15 @@ function buildUserDataScript(githubRegistrationToken, label) {
       // If runner home directory is specified, we expect the actions-runner software (and dependencies)
       // to be pre-installed in the AMI, so we simply cd into that directory and then start the runner
       return [
-        "#!/bin/bash",
+        '#!/bin/bash',
         "sudo -u ec2-user -i <<'EOF'",
         `cd "${config.input.runnerHomeDir}"`,
         `echo "${config.input.preRunnerScript}" > pre-runner-script.sh`,
-        "source pre-runner-script.sh",
+        'source pre-runner-script.sh',
         // "export RUNNER_ALLOW_RUNASROOT=1",
         `./config.sh --url https://github.com/${config.githubContext.owner}/${config.githubContext.repo} --token ${githubRegistrationToken} --labels ${label} --unattended`,
-        "./run.sh",
-        "EOF",
+        './run.sh',
+        'EOF',
       ];
     } else {
       return [
