@@ -34,6 +34,15 @@ function buildUserDataScript(githubRegistrationToken, label) {
     } else {
       return [
         '<powershell>',
+        "Start-Sleep -Seconds 30",
+        "$disk = Get-Disk | Where-Object PartitionStyle -eq 'Uninitialized'",
+        "Initialize-Disk -Number $disk.Number -PartitionStyle MBR",
+        "New-Partition -DiskNumber $disk.Number -UseMaximumSize -AssignDriveLetter | Out-Null",
+        "Format-Volume -DriveLetter $disk.DriveLetter -FileSystem NTFS -Confirm:$false",
+        'New-Item -Path "C:\\Users\\Administrator\\AppData\\Local\\npm-cache" -ItemType Directory -Force',
+        'New-Volume -DriveLetter $disk.DriveLetter -FileSystem NTFS -NewFileSystemLabel "MyData" -Confirm:$false',
+        'Get-PSDrive -PSProvider FileSystem',
+        'ls C:\\Users\\Administrator\\AppData\\Local\\npm-cache',
         'mkdir C:\\actions-runner; cd C:\\actions-runner',
         `echo "${config.input.preRunnerScript}" > pre-runner-script.ps1`,
         '.\\pre-runner-script.ps1',
@@ -146,15 +155,6 @@ async function startEc2Instance(label, githubRegistrationToken) {
     const ec2InstanceId = result.Instances[0].InstanceId;
     core.info(`AWS EC2 instance ${ec2InstanceId} is started`);
 
-    core.info(`Attaching EBS Storage`)
-    const attachCommand = AttachVolumeCommand({
-      Device: '/dev/sdf',
-      InstanceId: ec2InstanceId,
-      VolumeId: 'vol-0d006ab829cc62a2e',
-    });
-    const attachResult = client.send(attachCommand);
-    core.info(attachResult);
-
     return ec2InstanceId;
   } catch (error) {
     core.error('AWS EC2 instance starting error');
@@ -190,10 +190,20 @@ async function waitForInstanceRunning(ec2InstanceId) {
   try {
     await waitUntilInstanceRunning({ client, maxWaitTime: 90, minDelay: 3 }, params);
     core.info(`TEST AWS EC2 instance ${ec2InstanceId} is up and running`);
+
+    core.info(`Attaching EBS Storage`)
+    const attachCommand = new AttachVolumeCommand({
+      Device: '/dev/sdf',
+      InstanceId: ec2InstanceId,
+      VolumeId: 'vol-0afa9440d87b49a36',
+    });
+    const attachResult = client.send(attachCommand);
+    core.info(attachResult);
   } catch (error) {
     core.error(`AWS EC2 instance ${ec2InstanceId} initialization error`);
     throw error;
   }
+
 }
 
 module.exports = {
