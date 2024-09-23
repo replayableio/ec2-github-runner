@@ -94,14 +94,6 @@ async function startEc2Instance(label, githubRegistrationToken) {
     SecurityGroupIds: [config.input.securityGroupId],
     KeyName: 'gh-runner',
     TagSpecifications: config.tagSpecifications,
-    BlockDeviceMappings: [
-        {
-            DeviceName: '/dev/sdf',
-            Ebs: {
-                VolumeId: 'vol-0d006ab829cc62a2e',
-            }
-        }
-    ]
   };
 
   if (config.input.ec2Os === 'mac') {
