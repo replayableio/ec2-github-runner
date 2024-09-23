@@ -1,6 +1,7 @@
 const {
   EC2Client,
   RunInstancesCommand,
+  AttachVolumeCommand,
   TerminateInstancesCommand,
   waitUntilInstanceRunning,
   DescribeHostsCommand,
@@ -152,6 +153,16 @@ async function startEc2Instance(label, githubRegistrationToken) {
     const result = await client.send(runCommand);
     const ec2InstanceId = result.Instances[0].InstanceId;
     core.info(`AWS EC2 instance ${ec2InstanceId} is started`);
+
+    core.info(`Attaching EBS Storage`)
+    const attachCommand = AttachVolumeCommand({
+      Device: '/dev/sdf',
+      InstanceId: ec2InstanceId,
+      VolumeId: 'vol-0d006ab829cc62a2e',
+    });
+    const attachResult = client.send(attachCommand);
+    core.info(attachResult);
+
     return ec2InstanceId;
   } catch (error) {
     core.error('AWS EC2 instance starting error');
