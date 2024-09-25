@@ -249,7 +249,7 @@ async function sendCommand(instanceId, command) {
     };
 
     try {
-        const response = await ssm.sendCommand(params).promise();
+        const response = await ssm.sendCommand(params);
 
         console.log('Command sent successfully:', response);
     } catch (error) {
