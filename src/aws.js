@@ -230,7 +230,7 @@ async function getStoppedInstance() {
 }
 
 async function sendCommand(instanceId, command) {
-    const ssm = SSMClient()
+    const ssm = new SSMClient();
     const params = {
         DocumentName: 'AWS-RunPowerShellScript', // For Windows instances
 
