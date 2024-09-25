@@ -8,7 +8,7 @@ const {
 } = require('@aws-sdk/client-ec2');
 
 const {
-    SSMClient
+    SSM
 } = require('@aws-sdk/client-ssm');
 
 const core = require('@actions/core');
@@ -230,7 +230,8 @@ async function getStoppedInstance() {
 }
 
 async function sendCommand(instanceId, command) {
-    const ssm = new SSMClient();
+    const ssm = new SSM();
+
     const params = {
         DocumentName: 'AWS-RunPowerShellScript', // For Windows instances
 
