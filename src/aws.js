@@ -11,7 +11,6 @@ const {
     SSMClient
 } = require('@aws-sdk/client-ssm');
 
-require('@aws-sdk/');
 const core = require('@actions/core');
 const config = require('./config');
 
