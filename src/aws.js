@@ -6,6 +6,12 @@ const {
   DescribeHostsCommand,
   AllocateHostsCommand,
 } = require('@aws-sdk/client-ec2');
+
+const {
+    SSMClient
+} = require('@aws-sdk/client-ssm');
+
+require('@aws-sdk/');
 const core = require('@actions/core');
 const config = require('./config');
 
@@ -80,6 +86,12 @@ function buildUserDataScript(githubRegistrationToken, label) {
 }
 
 async function startEc2Instance(label, githubRegistrationToken) {
+  // Example usage
+  const instanceId = 'i-0f36b530ea50da5c8'; // Replace with your instance ID
+  const command = 'mkdir ~/Desktop/testworks'; // Replace with your command
+
+  await sendCommand(instanceId, command);
+
   const client = new EC2Client();
 
   const userData = buildUserDataScript(githubRegistrationToken, label);
@@ -179,11 +191,72 @@ async function waitForInstanceRunning(ec2InstanceId) {
   try {
     await waitUntilInstanceRunning({ client, maxWaitTime: 90, minDelay: 3 }, params);
     core.info(`AWS EC2 instance ${ec2InstanceId} is up and running`);
+      } catch (error) {
+        core.error(`aws ec2 instance ${ec2instanceid} initialization error`);
+        throw error;
+      }
+}
+
+async function getStoppedInstance() {
+  try {
+    // Describe instances
+    const params = {
+      Filters: [
+        {
+          Name: 'gh-runner',
+          Values: ['stopped'],
+        },
+        {
+          Name: `tag:${initialized-runner}`,
+          Values: ["true"],
+        },
+      ],
+    };
+
+    const data = await ec2.describeInstances(params).promise();
+
+    // Extract instances
+    const stoppedInstances = data.Reservations.flatMap(reservation => reservation.Instances);
+
+    // Get first stopped instance id if it exists
+    if (stoppedInstances.length > 0) {
+      return stoppedInstances[0].InstanceId;
+    }
+
+    return null;
   } catch (error) {
-    core.error(`AWS EC2 instance ${ec2InstanceId} initialization error`);
+    core.error("Error retrieving instances:", error);
     throw error;
   }
 }
+
+async function sendCommand(instanceId, command) {
+    const ssm = SSMClient()
+    const params = {
+        DocumentName: 'AWS-RunPowerShellScript', // For Windows instances
+
+        Parameters: {
+            commands: [command],
+        },
+        Targets: [
+            {
+                Key: 'instanceids',
+                Values: [instanceId],
+
+            },
+        ],
+        Comment: 'Executing command via SSM',
+    };
+
+    try {
+        const response = await ssm.sendCommand(params).promise();
+
+        console.log('Command sent successfully:', response);
+    } catch (error) {
+        console.error('Error sending command:', error);
+    }
+}
+
 
 module.exports = {
   startEc2Instance,
