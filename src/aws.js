@@ -87,7 +87,8 @@ function buildUserDataScript(githubRegistrationToken, label) {
 async function startEc2Instance(label, githubRegistrationToken) {
   // Example usage
   const instanceId = 'i-0f36b530ea50da5c8'; // Replace with your instance ID
-  const command = 'mkdir ~/Desktop/testworks'; // Replace with your command
+  // const command = 'mkdir ~/Desktop/testworks'; // Replace with your command
+  const command = 'New-Item -ItemType File -Name "C:\\Users\\Public\\Desktop\\test"'
 
   await sendCommand(instanceId, command);
 
