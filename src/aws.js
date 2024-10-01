@@ -27,7 +27,11 @@ function buildUserDataScript(githubRegistrationToken, label) {
       // to be pre-installed in the AMI, so we simply cd into that directory and then start the runner
       return [
         // '<powershell>',
+        'ls',
+        'pwd',
         `cd "${config.input.runnerHomeDir}"`,
+        'ls',
+        'pwd',
         `echo "${config.input.preRunnerScript}" > pre-runner-script.ps1`,
         '.\\pre-runner-script.ps1',
         `.\\config.cmd --url https://github.com/${config.githubContext.owner}/${config.githubContext.repo} --token ${githubRegistrationToken} --labels ${label} --name ${label} --unattended`,
@@ -315,7 +319,8 @@ async function sendCommand(instanceId, command) {
         DocumentName: 'AWS-RunPowerShellScript', // For Windows instances
 
         Parameters: {
-            commands: [command.join(" ; ")],
+            // commands: [command.join(" ; ")],
+            commands: command,
         },
         Targets: [
             {
