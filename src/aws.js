@@ -26,18 +26,18 @@ function buildUserDataScript(githubRegistrationToken, label) {
       // If runner home directory is specified, we expect the actions-runner software (and dependencies)
       // to be pre-installed in the AMI, so we simply cd into that directory and then start the runner
       return [
-        '<powershell>',
+        // '<powershell>',
         `cd "${config.input.runnerHomeDir}"`,
         `echo "${config.input.preRunnerScript}" > pre-runner-script.ps1`,
         '.\\pre-runner-script.ps1',
         `./config.cmd --url https://github.com/${config.githubContext.owner}/${config.githubContext.repo} --token ${githubRegistrationToken} --labels ${label} --name ${label} --unattended`,
         './run.cmd',
-        '</powershell>',
-        '<persist>false</persist>',
+        // '</powershell>',
+        // '<persist>false</persist>',
       ];
     } else {
       return [
-        '<powershell>',
+        // '<powershell>',
         'mkdir C:\\actions-runner; cd C:\\actions-runner',
         `echo "${config.input.preRunnerScript}" > pre-runner-script.ps1`,
         '.\\pre-runner-script.ps1',
@@ -45,8 +45,8 @@ function buildUserDataScript(githubRegistrationToken, label) {
         `Add-Type -AssemblyName System.IO.Compression.FileSystem ; [System.IO.Compression.ZipFile]::ExtractToDirectory("$PWD/actions-runner-win-x64-${runnerVersion}.zip", "$PWD")`,
         `./config.cmd --url https://github.com/${config.githubContext.owner}/${config.githubContext.repo} --token ${githubRegistrationToken} --labels ${label} --name ${label} --unattended`,
         './run.cmd',
-        '</powershell>',
-        '<persist>false</persist>',
+        // '</powershell>',
+        // '<persist>false</persist>',
       ];
     }
   } else if (config.input.ec2Os === 'mac') {
@@ -82,6 +82,84 @@ function buildUserDataScript(githubRegistrationToken, label) {
     core.error('Not supported ec2-os.');
     return [];
   }
+}
+
+async function restartEc2Instance(label, githubRegistrationToken) {
+  // Example usage
+  const ec2InstanceId = 'i-0f36b530ea50da5c8'; // Will search in future
+  // const command = 'New-Item -ItemType File -Name "C:\\Users\\Public\\Desktop\\test"'
+
+  const client = new EC2Client();
+
+  const userData = buildUserDataScript(githubRegistrationToken, label);
+
+  await sendCommand(ec2InstanceId, userData);
+
+  const params = {
+    ImageId: config.input.ec2ImageId,
+    InstanceType: config.input.ec2InstanceType,
+    MinCount: 1,
+    MaxCount: 1,
+    UserData: Buffer.from(userData.join('\n')).toString('base64'),
+    SecurityGroupIds: [config.input.securityGroupId],
+    KeyName: 'gh-runner',
+    TagSpecifications: config.tagSpecifications,
+  };
+
+  if (config.input.ec2Os === 'mac') {
+    params.Placement = {
+      Tenancy: 'host',
+    };
+  }
+
+  // const runCommand = new RunInstancesCommand(params);
+  //
+  // try {
+  //   if (config.input.ec2Os === 'mac') {
+  //     const describeCommand = new DescribeHostsCommand({
+  //       Filter: [
+  //         {
+  //           Name: 'auto-placement',
+  //           Values: ['on'],
+  //         },
+  //         {
+  //           Name: 'instance-type',
+  //           Values: [config.input.ec2InstanceType],
+  //         },
+  //         {
+  //           Name: 'state',
+  //           Values: ['available'],
+  //         },
+  //       ],
+  //     });
+  //     const dedicatedHosts = await client.send(describeCommand);
+  //
+  //     const availableHosts = dedicatedHosts.Hosts.filter((host) => host.AvailableCapacity.AvailableVCpus > 0).length;
+  //
+  //     core.info(`Available hosts: ${availableHosts}`);
+  //
+  //     if (!availableHosts) {
+  //       core.info('There are no dedicated hosts available, creating a new one');
+  //
+  //       await client.send(
+  //         new AllocateHostsCommand({
+  //           AutoPlacement: 'on',
+  //           AvailabilityZone: config.input.availabilityZone,
+  //           InstanceType: config.input.ec2InstanceType,
+  //           Quantity: 1,
+  //         })
+  //       );
+  //     }
+  //   }
+
+    const result = await client.send(runCommand);
+    // const ec2InstanceId = result.Instances[0].InstanceId;
+    core.info(`AWS EC2 instance ${ec2InstanceId} is started`);
+    return ec2InstanceId;
+  // } catch (error) {
+  //   core.error('AWS EC2 instance starting error');
+  //   throw error;
+  // }
 }
 
 async function startEc2Instance(label, githubRegistrationToken) {
@@ -173,8 +251,8 @@ async function terminateEc2Instance() {
   const command = new TerminateInstancesCommand(params);
 
   try {
-    await client.send(command);
-    core.info(`AWS EC2 instance ${config.input.ec2InstanceId} is terminated`);
+    // await client.send(command);
+    core.info(`AWS EC2 instance ${config.input.ec2InstanceId} is NOT terminated`);
   } catch (error) {
     core.error(`AWS EC2 instance ${config.input.ec2InstanceId} termination error`);
     throw error;
