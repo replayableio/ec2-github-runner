@@ -324,7 +324,10 @@ async function sendCommand(instanceId, command) {
 
             },
         ],
-        Comment: 'Executing command via SSM',
+       OutputS3BucketName: "ec2-github-runner-output",
+       OutputS3KeyPrefix: "alex-test",
+       OutputS3Region: "us-east-2",
+       Comment: 'Executing command via SSM',
     };
 
     try {
