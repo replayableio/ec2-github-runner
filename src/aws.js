@@ -86,7 +86,7 @@ function buildUserDataScript(githubRegistrationToken, label) {
 
 async function restartEc2Instance(label, githubRegistrationToken) {
   // Example usage
-  const ec2InstanceId = 'i-0f36b530ea50da5c8'; // Will search in future
+  const ec2InstanceId = 'i-0256359d0e9c9f419'; // Will search in future
   // const command = 'New-Item -ItemType File -Name "C:\\Users\\Public\\Desktop\\test"'
 
   const client = new EC2Client();
