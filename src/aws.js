@@ -339,6 +339,7 @@ async function sendCommand(instanceId, command) {
 
 module.exports = {
   startEc2Instance,
+  restartEc2Instance,
   terminateEc2Instance,
   waitForInstanceRunning,
 };
