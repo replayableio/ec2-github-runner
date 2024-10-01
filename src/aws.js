@@ -27,6 +27,8 @@ function buildUserDataScript(githubRegistrationToken, label) {
       // to be pre-installed in the AMI, so we simply cd into that directory and then start the runner
       return [
         // '<powershell>',
+        'ls',
+        'pwd',
         `cd "${config.input.runnerHomeDir}"`,
         'ls',
         'pwd',
@@ -40,6 +42,8 @@ function buildUserDataScript(githubRegistrationToken, label) {
     } else {
       return [
         // '<powershell>',
+        'ls',
+        'pwd',
         'mkdir C:\\actions-runner; cd C:\\actions-runner',
         `echo "${config.input.preRunnerScript}" > pre-runner-script.ps1`,
         '.\\pre-runner-script.ps1',
