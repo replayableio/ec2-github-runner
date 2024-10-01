@@ -315,7 +315,7 @@ async function sendCommand(instanceId, command) {
         DocumentName: 'AWS-RunPowerShellScript', // For Windows instances
 
         Parameters: {
-            commands: [command.join(" && ")],
+            commands: [command.join(" ; ")],
         },
         Targets: [
             {
