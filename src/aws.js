@@ -22,7 +22,7 @@ function buildUserDataScript(githubRegistrationToken, label) {
 
   if (config.input.ec2Os === 'windows') {
     // Name the instance the same as the label to avoid machine name conflicts in GitHub.
-    if (!config.input.runnerHomeDir) {
+    if (config.input.runnerHomeDir) {
       // If runner home directory is specified, we expect the actions-runner software (and dependencies)
       // to be pre-installed in the AMI, so we simply cd into that directory and then start the runner
       return [
