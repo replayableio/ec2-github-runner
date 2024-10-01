@@ -35,7 +35,7 @@ function buildUserDataScript(githubRegistrationToken, label) {
         // `echo "${config.input.preRunnerScript}" > pre-runner-script.ps1`,
         // '.\\pre-runner-script.ps1',
         `.\\config.cmd --url https://github.com/${config.githubContext.owner}/${config.githubContext.repo} --token ${githubRegistrationToken} --labels ${label} --name ${label}`,
-        // '.\\run.cmd',
+        '.\\run.cmd',
         // '</powershell>',
         // '<persist>false</persist>',
       ];
