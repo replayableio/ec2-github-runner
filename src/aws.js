@@ -152,7 +152,7 @@ async function restartEc2Instance(label, githubRegistrationToken) {
   //     }
   //   }
 
-    const result = await client.send(runCommand);
+    // const result = await client.send(runCommand);
     // const ec2InstanceId = result.Instances[0].InstanceId;
     core.info(`AWS EC2 instance ${ec2InstanceId} is started`);
     return ec2InstanceId;
