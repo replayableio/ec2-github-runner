@@ -37,7 +37,7 @@ function buildUserDataScript(githubRegistrationToken, label) {
         //
         // `.\\config.cmd remove --token ${githubRegistrationToken} --labels ${label} --name ${label} --unattended`,
         // `.\\config.cmd --url https://github.com/${config.githubContext.owner}/${config.githubContext.repo} --token ${githubRegistrationToken} --labels ${label} --name ${label} --unattended`,
-        '.\\run.cmd',
+        // '.\\run.cmd',
         // '</powershell>',
         // '<persist>false</persist>',
       ];
