@@ -36,7 +36,7 @@ function buildUserDataScript(githubRegistrationToken, label) {
         // '.\\pre-runner-script.ps1',
         //
         // `.\\config.cmd remove --token ${githubRegistrationToken} --labels ${label} --name ${label} --unattended`,
-        // `.\\config.cmd --url https://github.com/${config.githubContext.owner}/${config.githubContext.repo} --token ${githubRegistrationToken} --labels ${label} --name ${label} --unattended`,
+        `.\\config.cmd --url https://github.com/${config.githubContext.owner}/${config.githubContext.repo} --token ${githubRegistrationToken} --labels ${label} --name ${label} --unattended`,
         // '.\\run.cmd',
         // '</powershell>',
         // '<persist>false</persist>',
@@ -319,6 +319,8 @@ async function getStoppedInstance() {
 async function sendCommand(instanceId, command) {
     const ssm = new SSM();
 
+    core.info("COMMAND");
+    core.info(command.join("\n"));
     const params = {
         DocumentName: 'AWS-RunPowerShellScript', // For Windows instances
 
