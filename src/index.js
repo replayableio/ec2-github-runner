@@ -26,9 +26,27 @@ async function stop() {
   // await gh.removeRunner();
 }
 
-(async function () {
+async function manage_instances() {
+  const githubRegistrationToken = await gh.getRegistrationToken();
+  const ec2InstanceId = await aws.startEc2Instance(label, githubRegistrationToken);
+  // await aws.terminateEc2Instance();
+  // await gh.removeRunner();
+}
+
+(async function() {
   try {
-    config.input.mode === 'start' ? await start() : await stop();
+    if (config.input.mode === 'start') {
+      await start()
+    }
+
+    else if (config.input.mode === 'stop') {
+      await stop()
+    }
+
+    else if (config.input.mode === 'manage') {
+      await manage_instances();
+    }
+
   } catch (error) {
     core.error(error);
     core.setFailed(error.message);

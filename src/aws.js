@@ -5,6 +5,7 @@ const {
   waitUntilInstanceRunning,
   DescribeHostsCommand,
   AllocateHostsCommand,
+  VolumeType,
 } = require('@aws-sdk/client-ec2');
 
 const {
@@ -177,7 +178,7 @@ async function startEc2Instance(label, githubRegistrationToken) {
   // const command = 'mkdir ~/Desktop/testworks'; // Replace with your command
   const command = 'New-Item -ItemType File -Name "C:\\Users\\Public\\Desktop\\test"'
 
-  await sendCommand(instanceId, command);
+  // await sendCommand(instanceId, command);
 
   const client = new EC2Client();
 
@@ -192,6 +193,22 @@ async function startEc2Instance(label, githubRegistrationToken) {
     SecurityGroupIds: [config.input.securityGroupId],
     KeyName: 'gh-runner',
     TagSpecifications: config.tagSpecifications,
+    HibernationOptions: {
+      Configured: true
+    },
+    BlockDeviceMappings: [{
+      DeviceName: "/dev/xvda",
+      Ebs: {
+        DeleteOnTermination: true,
+        Iops: 3000,
+        SnapshotId: "snap-0e4dc2fbadbe11e45",
+        VolumeSize: 100,
+        VolumeType: "gp3",
+        KmsKeyId: "aws/ebs",
+        Throughput: 125,
+        Encrypted: true,
+      }
+    }]
   };
 
   if (config.input.ec2Os === 'mac') {
