@@ -27,8 +27,8 @@ async function stop() {
 }
 
 async function manage_instances() {
-  const githubRegistrationToken = await gh.getRegistrationToken();
-  const ec2InstanceId = await aws.startEc2Instance(label, githubRegistrationToken);
+  // const githubRegistrationToken = await gh.getRegistrationToken();
+  const ec2InstanceId = await aws.startEc2Instance(label, "");
   // await aws.terminateEc2Instance();
   // await gh.removeRunner();
 }
