@@ -4,12 +4,14 @@ const config = require('./config');
 const core = require('@actions/core');
 
 function setOutput(label, ec2InstanceId) {
-  core.setOutput('label', label);
+  core.setOutput('label', "zbcby");
   core.setOutput('ec2-instance-id', ec2InstanceId);
 }
 
 async function start() {
-  const label = config.generateUniqueLabel();
+  // const label = config.generateUniqueLabel();
+
+  const label = "zbcby";
   const githubRegistrationToken = await gh.getRegistrationToken();
   core.info("TOKEN");
   core.info(githubRegistrationToken);

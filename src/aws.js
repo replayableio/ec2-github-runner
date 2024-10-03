@@ -22,7 +22,7 @@ function buildUserDataScript(githubRegistrationToken, label) {
 
   if (config.input.ec2Os === 'windows') {
     // Name the instance the same as the label to avoid machine name conflicts in GitHub.
-    if (config.input.runnerHomeDir) {
+    if (!config.input.runnerHomeDir) {
       // If runner home directory is specified, we expect the actions-runner software (and dependencies)
       // to be pre-installed in the AMI, so we simply cd into that directory and then start the runner
       return [
@@ -35,8 +35,8 @@ function buildUserDataScript(githubRegistrationToken, label) {
         // `echo "${config.input.preRunnerScript}" > pre-runner-script.ps1`,
         // '.\\pre-runner-script.ps1',
         //
-        // `.\\config.cmd remove --token ${githubRegistrationToken} --labels ${label} --name ${label} --unattended`,
-        `.\\config.cmd --url https://github.com/${config.githubContext.owner}/${config.githubContext.repo} --token ${githubRegistrationToken} --labels ${label} --name ${label} --unattended`,
+        // `.\\config.cmd remove --token ${githubRegistrationToken}`,
+        // `.\\config.cmd --url https://github.com/${config.githubContext.owner}/${config.githubContext.repo} --token ${githubRegistrationToken} --labels ${label} --name ${label} --unattended`,
         // '.\\run.cmd',
         // '</powershell>',
         // '<persist>false</persist>',
@@ -94,7 +94,8 @@ function buildUserDataScript(githubRegistrationToken, label) {
 
 async function restartEc2Instance(label, githubRegistrationToken) {
   // Example usage
-  const ec2InstanceId = 'i-092fa4d63f5095db8'; // Will search in future
+  // const ec2InstanceId = 'i-092fa4d63f5095db8'; // Will search in future
+  const ec2InstanceId = 'i-03fad19f0f49c3110';
   // const command = 'New-Item -ItemType File -Name "C:\\Users\\Public\\Desktop\\test"'
 
   const client = new EC2Client();
