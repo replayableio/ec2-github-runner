@@ -1,7 +1,9 @@
 const {
   EC2Client,
   RunInstancesCommand,
+  StartInstancesCommand,
   TerminateInstancesCommand,
+  DescribeInstancesCommand,
   waitUntilInstanceRunning,
   DescribeHostsCommand,
   AllocateHostsCommand,
@@ -185,8 +187,51 @@ async function waitForInstanceRunning(ec2InstanceId) {
   }
 }
 
+async function startStoppedInstanceInAutoScalingGroup(groupName) {
+  const client = new EC2Client();
+
+  const command = new DescribeInstancesCommand({
+    Filters: [
+      {
+        Name: 'instance-state-name',
+        Values: ['stopped']
+      },
+      {
+        Name: 'tag:aws:autoscaling:groupName',
+        Values: [groupName]
+      }
+    ]
+  });
+
+  core.info("Searching for warm runners");
+
+  // Describe all instances
+  const instancesData = await client.send(command);
+
+  // Find the first stopped instance in the Auto Scaling group
+  core.info(`Found ${instancesData.Reservations.length} Instances`);
+
+  if (instancesData.Reservations.length == 0 ||
+    instancesData.Reservations[0].Instances.length == 0) {
+    throw new Error("No Stopped Instance Found");
+  }
+
+  const instanceToStart = instancesData.Reservations[0].Instances[0].InstanceId;
+  core.info(`Found Stopped Instance: ${instanceToStart}`);
+
+  // Create Start Command
+  const startCommand = new StartInstancesCommand({
+    InstanceIds: [instanceToStart]
+  });
+
+  core.info(`Starting Instance`);
+  await client.send(startCommand);
+  return instanceToStart;
+}
+
 module.exports = {
   startEc2Instance,
   terminateEc2Instance,
   waitForInstanceRunning,
+  startStoppedInstanceInAutoScalingGroup,
 };
