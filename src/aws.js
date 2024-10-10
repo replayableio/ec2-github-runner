@@ -64,7 +64,11 @@ async function startEc2Instance(launchTemplateId, launchTemplateVersion) {
   const runCommand = new RunInstancesCommand(params);
   const runResponse = await client.send(runCommand);
 
-  core.info("Instance started:", runResponse.Instances[0].InstanceId);
+  if (runResponse.Instances.length == 0) {
+    throw Error("Instance Did Not start");
+  }
+
+  core.info(`Instance started: ${runResponse.Instances[0].InstanceId}`);
   return runResponse.Instances[0].InstanceId;
 }
 
