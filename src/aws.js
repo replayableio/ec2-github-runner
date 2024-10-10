@@ -60,6 +60,7 @@ async function startEc2Instance(launchTemplateId, launchTemplateVersion, runId) 
         Version: launchTemplateVersion,
       },
       TagSpecifications: [{
+        ResourceType: 'instance',
         Tags: [{
           Key: "runId",
           Value: runId
