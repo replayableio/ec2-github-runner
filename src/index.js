@@ -3,25 +3,35 @@ const gh = require('./gh');
 const config = require('./config');
 const core = require('@actions/core');
 
-function setOutput(label, ec2InstanceId) {
-  core.setOutput('label', label);
-  core.setOutput('ec2-instance-id', ec2InstanceId);
-}
-
 async function start() {
-  const ec2InstanceId = await aws.startStoppedInstanceInAutoScalingGroup('testdriver_runners');
+  const groupName = config.input.ec2AutoScalingGroupName;
+  let ec2InstanceId = await aws.startStoppedInstanceInAutoScalingGroup(groupName);
 
-  setOutput(ec2InstanceId, ec2InstanceId);
+  // If did not start, start one from cold, get ID
+  if (!ec2InstanceId) {
+    core.info("Could not launch from AutoScaling Group, attempting cold start");
+    let template = await aws.getLaunchTemplateFromASG(config.input.ec2AutoScalingGroupName);
+    ec2InstanceId = aws.startEc2Instance(template.id, template.version);
+  }
+
+  if (!ec2InstanceId) {
+    throw Error("Could not start instance");
+  }
+
+  core.setOutput('ec2-instance-id', ec2InstanceId);
+
   await aws.waitForInstanceRunning(ec2InstanceId);
   await gh.waitForRunnerRegistered(ec2InstanceId);
 }
 
 async function stop() {
-  await aws.terminateEc2Instance();
-  await gh.removeRunner();
+  const ec2InstanceId = config.input.ec2InstanceId;
+  core.info(`Stopping ${ec2InstanceId}`);
+  await aws.terminateEc2Instance(ec2InstanceId);
+  await gh.removeRunner(ec2InstanceId);
 }
 
-(async function () {
+(async function() {
   try {
     config.input.mode === 'start' ? await start() : await stop();
   } catch (error) {
