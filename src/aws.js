@@ -136,7 +136,11 @@ async function startStoppedInstanceInAutoScalingGroup(groupName) {
     return null;
   }
 
-  const instanceToStart = instancesData.Reservations[0].Instances[0].InstanceId;
+  // Get a random index as a quick fix to avoid simultaneous jobs
+  let idx = Math.floor(Math.random() * instancesData.Reservations.length);
+  let idx2 = Math.floor(Math.random() * instancesData.Reservations[idx].Instances.length);
+
+  const instanceToStart = instancesData.Reservations[idx].Instances[idx2].InstanceId;
   core.info(`Found Stopped Instance: ${instanceToStart}`);
 
   // Create Start Command
