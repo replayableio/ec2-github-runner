@@ -128,7 +128,7 @@ async function startStoppedInstanceInAutoScalingGroup(groupName, runId) {
 
       // Only where runId is empty
       {
-        Name: 'runId',
+        Name: 'tag:runId',
         Values: ['']
       }
     ]
