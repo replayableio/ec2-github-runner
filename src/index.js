@@ -11,7 +11,7 @@ async function start() {
   if (!ec2InstanceId) {
     core.info("Could not launch from AutoScaling Group, attempting cold start");
     let template = await aws.getLaunchTemplateFromASG(config.input.ec2AutoScalingGroupName);
-    ec2InstanceId = aws.startEc2Instance(template.id, template.version);
+    ec2InstanceId = await aws.startEc2Instance(template.id, template.version);
   }
 
   if (!ec2InstanceId) {
