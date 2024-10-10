@@ -20,6 +20,7 @@ class Config {
     this.githubContext = {
       owner: github.context.repo.owner,
       repo: github.context.repo.repo,
+      runId: github.context.runId,
     };
 
     //

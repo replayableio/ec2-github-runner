@@ -4,6 +4,7 @@ const {
   StartInstancesCommand,
   TerminateInstancesCommand,
   DescribeInstancesCommand,
+  CreateTagsCommand,
   waitUntilInstanceRunning,
 } = require('@aws-sdk/client-ec2');
 
@@ -49,19 +50,24 @@ async function getLaunchTemplateFromASG(autoScalingGroupName) {
  * launchTemplateId: string
  * launchTemplateVersion: string
  */
-async function startEc2Instance(launchTemplateId, launchTemplateVersion) {
+async function startEc2Instance(launchTemplateId, launchTemplateVersion, runId) {
   const client = new EC2Client();
 
-  const params = {
-    LaunchTemplate: {
-      LaunchTemplateId: launchTemplateId,
-      Version: launchTemplateVersion,
-    },
-    MinCount: 1,
-    MaxCount: 1,
-  };
-
-  const runCommand = new RunInstancesCommand(params);
+  const runCommand = new RunInstancesCommand(
+    {
+      LaunchTemplate: {
+        LaunchTemplateId: launchTemplateId,
+        Version: launchTemplateVersion,
+      },
+      TagSpecifications: [{
+        Tags: [{
+          Key: "runId",
+          Value: runId
+        }]
+      }],
+      MinCount: 1,
+      MaxCount: 1,
+    });
   const runResponse = await client.send(runCommand);
 
   if (runResponse.Instances.length == 0) {
@@ -72,7 +78,7 @@ async function startEc2Instance(launchTemplateId, launchTemplateVersion) {
   return runResponse.Instances[0].InstanceId;
 }
 
-async function terminateEc2Instance(ec2InstanceId) {
+async function terminateEc2Instance(ec2InstanceId, runId) {
   const client = new EC2Client();
 
   const params = {
@@ -106,7 +112,7 @@ async function waitForInstanceRunning(ec2InstanceId) {
   }
 }
 
-async function startStoppedInstanceInAutoScalingGroup(groupName) {
+async function startStoppedInstanceInAutoScalingGroup(groupName, runId) {
   const client = new EC2Client();
 
   const command = new DescribeInstancesCommand({
@@ -118,6 +124,12 @@ async function startStoppedInstanceInAutoScalingGroup(groupName) {
       {
         Name: 'tag:aws:autoscaling:groupName',
         Values: [groupName]
+      },
+
+      // Only where runId is empty
+      {
+        Name: 'runId',
+        Values: ['']
       }
     ]
   });
@@ -143,6 +155,20 @@ async function startStoppedInstanceInAutoScalingGroup(groupName) {
   const instanceToStart = instancesData.Reservations[idx].Instances[idx2].InstanceId;
   core.info(`Found Stopped Instance: ${instanceToStart}`);
 
+  // Add the runId Tag
+  core.info(`Adding RunId as tag ${runId}`);
+  await client.send(
+    new CreateTagsCommand({
+      Resources: [instanceToStart],
+      Tags: [
+        {
+          Key: "runId",
+          Value: runId,
+        },
+      ],
+    })
+  );
+
   // Create Start Command
   const startCommand = new StartInstancesCommand({
     InstanceIds: [instanceToStart]
@@ -150,6 +176,8 @@ async function startStoppedInstanceInAutoScalingGroup(groupName) {
 
   core.info(`Starting Instance`);
   await client.send(startCommand);
+
+
   return instanceToStart;
 }
 
