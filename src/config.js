@@ -4,15 +4,30 @@ const github = require('@actions/github');
 class Config {
   constructor() {
     this.input = {
-      // i.e. start or stop
       mode: core.getInput('mode'),
       githubToken: core.getInput('github-token'),
-      // Group ID that contains the warm start group and the template
-      ec2AutoScalingGroupName: core.getInput('ec2-auto-scaling-group-name'),
-      // Ec2 Instance to stop
+      ec2ImageId: core.getInput('ec2-image-id'),
+      ec2InstanceType: core.getInput('ec2-instance-type'),
+      subnetId: core.getInput('subnet-id'),
+      securityGroupId: core.getInput('security-group-id'),
+      label: core.getInput('label'),
       ec2InstanceId: core.getInput('ec2-instance-id'),
       ec2Os: core.getInput('ec2-os'),
+      iamRoleName: core.getInput('iam-role-name'),
+      runnerHomeDir: core.getInput('runner-home-dir'),
+      awsKeyPairName: core.getInput('aws-key-pair-name'),
+      preRunnerScript: core.getInput('pre-runner-script'),
+      availabilityZone: core.getInput('availability-zone'),
     };
+
+    const tags = JSON.parse(core.getInput('aws-resource-tags'));
+    this.tagSpecifications = null;
+    if (tags.length > 0) {
+      this.tagSpecifications = [
+        { ResourceType: 'instance', Tags: tags },
+        { ResourceType: 'volume', Tags: tags },
+      ];
+    }
 
     // the values of github.context.repo.owner and github.context.repo.repo are taken from
     // the environment variable GITHUB_REPOSITORY specified in "owner/repo" format and
@@ -25,6 +40,7 @@ class Config {
     //
     // validate input
     //
+
     if (!this.input.mode) {
       throw new Error(`The 'mode' input is not specified`);
     }
@@ -35,8 +51,12 @@ class Config {
 
     if (this.input.mode === 'start') {
       if (
+        !this.input.ec2ImageId ||
+        !this.input.ec2InstanceType ||
         !this.input.ec2Os ||
-        !this.input.ec2AutoScalingGroupName
+        !this.input.subnetId ||
+        !this.input.securityGroupId ||
+        !this.input.availabilityZone
       ) {
         throw new Error(`Not all the required inputs are provided for the 'start' mode`);
       }
@@ -44,12 +64,16 @@ class Config {
         throw new Error(`Wrong ec2-os. Allowed values: mac, windows or linux.`);
       }
     } else if (this.input.mode === 'stop') {
-      if (!this.input.ec2InstanceId) {
+      if (!this.input.label || !this.input.ec2InstanceId) {
         throw new Error(`Not all the required inputs are provided for the 'stop' mode`);
       }
     } else {
       throw new Error('Wrong mode. Allowed values: start, stop.');
     }
+  }
+
+  generateUniqueLabel() {
+    return Math.random().toString(36).substring(2, 7);
   }
 }
 

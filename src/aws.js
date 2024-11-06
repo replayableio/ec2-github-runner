@@ -1,145 +1,170 @@
 const {
   EC2Client,
   RunInstancesCommand,
-  StartInstancesCommand,
   TerminateInstancesCommand,
-  DescribeInstancesCommand,
-  CreateTagsCommand,
   waitUntilInstanceRunning,
+  DescribeHostsCommand,
+  AllocateHostsCommand,
 } = require('@aws-sdk/client-ec2');
-
-const {
-  AutoScalingClient,
-  DescribeAutoScalingGroupsCommand
-} = require('@aws-sdk/client-auto-scaling');
-
-const {
-  SSMClient,
-  SendCommandCommand
-} = require('@aws-sdk/client-ssm');
-
 const core = require('@actions/core');
-const { getRegistrationToken } = require('./gh');
+const config = require('./config');
 
-// Sleep Helper function
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
+const runnerVersion = '2.309.0';
 
+// User data scripts are run as the root user
+function buildUserDataScript(githubRegistrationToken, label) {
+  core.info(`Building data script for ${config.input.ec2Os}`);
 
-/**
- * Gets the launch template used in the autoscaling group
- */
-async function getLaunchTemplateFromASG(autoScalingGroupName) {
-  const client = new AutoScalingClient();
-
-  const params = {
-    AutoScalingGroupNames: [autoScalingGroupName], // Replace with your ASG name
-  };
-
-  const command = new DescribeAutoScalingGroupsCommand(params);
-  const data = await client.send(command);
-
-  if (data.AutoScalingGroups.length == 0) {
-    throw Error('Auto Scaling Group not found')
+  if (config.input.ec2Os === 'windows') {
+    // Name the instance the same as the label to avoid machine name conflicts in GitHub.
+    if (config.input.runnerHomeDir) {
+      // If runner home directory is specified, we expect the actions-runner software (and dependencies)
+      // to be pre-installed in the AMI, so we simply cd into that directory and then start the runner
+      return [
+        '<powershell>',
+        `cd "${config.input.runnerHomeDir}"`,
+        `echo "${config.input.preRunnerScript}" > pre-runner-script.ps1`,
+        '.\\pre-runner-script.ps1',
+        `./config.cmd --url https://github.com/${config.githubContext.owner}/${config.githubContext.repo} --token ${githubRegistrationToken} --labels ${label} --name ${label} --unattended`,
+        './run.cmd',
+        '</powershell>',
+        '<persist>false</persist>',
+      ];
+    } else {
+      return [
+        '<powershell>',
+        'mkdir C:\\actions-runner; cd C:\\actions-runner',
+        `echo "${config.input.preRunnerScript}" > pre-runner-script.ps1`,
+        '.\\pre-runner-script.ps1',
+        `Invoke-WebRequest -Uri https://github.com/actions/runner/releases/download/v${runnerVersion}/actions-runner-win-x64-${runnerVersion}.zip -OutFile actions-runner-win-x64-${runnerVersion}.zip`,
+        `Add-Type -AssemblyName System.IO.Compression.FileSystem ; [System.IO.Compression.ZipFile]::ExtractToDirectory("$PWD/actions-runner-win-x64-${runnerVersion}.zip", "$PWD")`,
+        `./config.cmd --url https://github.com/${config.githubContext.owner}/${config.githubContext.repo} --token ${githubRegistrationToken} --labels ${label} --name ${label} --unattended`,
+        './run.cmd',
+        '</powershell>',
+        '<persist>false</persist>',
+      ];
+    }
+  } else if (config.input.ec2Os === 'mac') {
+    if (config.input.runnerHomeDir) {
+      // If runner home directory is specified, we expect the actions-runner software (and dependencies)
+      // to be pre-installed in the AMI, so we simply cd into that directory and then start the runner
+      return [
+        '#!/bin/bash',
+        "sudo -u ec2-user -i <<'EOF'",
+        `cd "${config.input.runnerHomeDir}"`,
+        `echo "${config.input.preRunnerScript}" > pre-runner-script.sh`,
+        'source pre-runner-script.sh',
+        // "export RUNNER_ALLOW_RUNASROOT=1",
+        `./config.sh --url https://github.com/${config.githubContext.owner}/${config.githubContext.repo} --token ${githubRegistrationToken} --labels ${label} --unattended`,
+        './run.sh',
+        'EOF',
+      ];
+    } else {
+      return [
+        '#!/bin/bash',
+        "sudo -u ec2-user -i <<'EOF'",
+        'mkdir actions-runner && cd actions-runner',
+        `echo "${config.input.preRunnerScript}" > pre-runner-script.sh`,
+        'source pre-runner-script.sh',
+        'case $(uname -m) in aarch64) ARCH="arm64" ;; amd64|x86_64) ARCH="v${runnerVersion}/actions-runner-linux-${RUNNER_ARCH}-${runnerVersion}.tar.gz',
+        `tar xzf ./actions-runner-linux-\${RUNNER_ARCH}-${runnerVersion}.tar.gz`,
+        `./config.sh --url https://github.com/${config.githubContext.owner}/${config.githubContext.repo} --token ${githubRegistrationToken} --labels ${label}`,
+        './run.sh',
+        'EOF',
+      ];
+    }
+  } else {
+    core.error('Not supported ec2-os.');
+    return [];
   }
-
-  const asg = data.AutoScalingGroups[0];
-  const launchTemplate = asg.LaunchTemplate;
-
-  core.info(`Using Launch Template: ${launchTemplate.LaunchTemplateId}`);
-  core.info(`Name: ${launchTemplate.LaunchTemplateName}`);
-  core.info(`Version: ${launchTemplate.Version}`);
-
-  return {
-    id: launchTemplate.LaunchTemplateId,
-    version: launchTemplate.Version,
-  };
 }
 
-async function startRunnerCommand(instanceId) {
-  const client = new SSMClient();
-
-  core.info("Getting getRegistrationToken");
-  const token = await getRegistrationToken();
-
-  const commands = [
-    "cd C:\\actions-runner",
-    `./config.cmd --token ${token} --url https://github.com/replayableio/testdriver --labels ${instanceId} --name ${instanceId} --unattended --ephemeral --runasservice --windowslogonaccount Administrator --windowslogonpassword wwv9uJ0sqlulbN3`
-  ];
-
-  const command = new SendCommandCommand({
-    InstanceIds: [instanceId],
-    DocumentName: 'AWS-RunPowerShellScript',
-    Parameters: {
-      commands
-    }
-  });
-
-  core.info("Sending Command To Instance, may take several tries");
-  const maxTries = 30;
-  for (let i = 0; i < maxTries; i++) {
-    try {
-      await client.send(command);
-      core.info("Successfully sent command");
-      return;
-    }
-    catch (e) {
-      core.info(`Sending command... Attempt ${i} / ${maxTries}`);
-      await sleep(5000);
-    }
-  }
-  throw Error("Timed out trying to send command to instance");
-}
-
-/**
- * Start an instance from a launch template
- * launchTemplateId: string
- * launchTemplateVersion: string
- */
-async function startEc2Instance(launchTemplateId, launchTemplateVersion, runId) {
+async function startEc2Instance(label, githubRegistrationToken) {
   const client = new EC2Client();
 
-  const runCommand = new RunInstancesCommand(
-    {
-      LaunchTemplate: {
-        LaunchTemplateId: launchTemplateId,
-        Version: launchTemplateVersion,
-      },
-      TagSpecifications: [{
-        ResourceType: 'instance',
-        Tags: [{
-          Key: "runId",
-          Value: runId
-        }]
-      }],
-      MinCount: 1,
-      MaxCount: 1,
-    });
-  const runResponse = await client.send(runCommand);
+  const userData = buildUserDataScript(githubRegistrationToken, label);
 
-  if (runResponse.Instances.length == 0) {
-    throw Error("Instance Did Not start");
+  const params = {
+    ImageId: config.input.ec2ImageId,
+    InstanceType: config.input.ec2InstanceType,
+    MinCount: 1,
+    MaxCount: 1,
+    UserData: Buffer.from(userData.join('\n')).toString('base64'),
+    SecurityGroupIds: [config.input.securityGroupId],
+    KeyName: 'gh-runner',
+    TagSpecifications: config.tagSpecifications,
+  };
+
+  if (config.input.ec2Os === 'mac') {
+    params.Placement = {
+      Tenancy: 'host',
+    };
   }
 
-  core.info(`Instance started: ${runResponse.Instances[0].InstanceId}`);
-  return runResponse.Instances[0].InstanceId;
+  const runCommand = new RunInstancesCommand(params);
+
+  try {
+    if (config.input.ec2Os === 'mac') {
+      const describeCommand = new DescribeHostsCommand({
+        Filter: [
+          {
+            Name: 'auto-placement',
+            Values: ['on'],
+          },
+          {
+            Name: 'instance-type',
+            Values: [config.input.ec2InstanceType],
+          },
+          {
+            Name: 'state',
+            Values: ['available'],
+          },
+        ],
+      });
+      const dedicatedHosts = await client.send(describeCommand);
+
+      const availableHosts = dedicatedHosts.Hosts.filter((host) => host.AvailableCapacity.AvailableVCpus > 0).length;
+
+      core.info(`Available hosts: ${availableHosts}`);
+
+      if (!availableHosts) {
+        core.info('There are no dedicated hosts available, creating a new one');
+
+        await client.send(
+          new AllocateHostsCommand({
+            AutoPlacement: 'on',
+            AvailabilityZone: config.input.availabilityZone,
+            InstanceType: config.input.ec2InstanceType,
+            Quantity: 1,
+          })
+        );
+      }
+    }
+
+    const result = await client.send(runCommand);
+    const ec2InstanceId = result.Instances[0].InstanceId;
+    core.info(`AWS EC2 instance ${ec2InstanceId} is started`);
+    return ec2InstanceId;
+  } catch (error) {
+    core.error('AWS EC2 instance starting error');
+    throw error;
+  }
 }
 
-async function terminateEc2Instance(ec2InstanceId) {
+async function terminateEc2Instance() {
   const client = new EC2Client();
 
   const params = {
-    InstanceIds: [ec2InstanceId],
+    InstanceIds: [config.input.ec2InstanceId],
   };
 
   const command = new TerminateInstancesCommand(params);
 
   try {
     await client.send(command);
-    core.info(`AWS EC2 instance ${ec2InstanceId} is terminated`);
+    core.info(`AWS EC2 instance ${config.input.ec2InstanceId} is terminated`);
   } catch (error) {
-    core.error(`AWS EC2 instance ${ec2InstanceId} termination error`);
+    core.error(`AWS EC2 instance ${config.input.ec2InstanceId} termination error`);
     throw error;
   }
 }
@@ -160,80 +185,8 @@ async function waitForInstanceRunning(ec2InstanceId) {
   }
 }
 
-async function startStoppedInstanceInAutoScalingGroup(groupName, runId) {
-  const client = new EC2Client();
-
-  const command = new DescribeInstancesCommand({
-    Filters: [
-      {
-        Name: 'instance-state-name',
-        Values: ['stopped']
-      },
-      {
-        Name: 'tag:aws:autoscaling:groupName',
-        Values: [groupName]
-      },
-
-      // Only where runId is empty
-      {
-        Name: 'tag:runId',
-        Values: ['']
-      }
-    ]
-  });
-
-  core.info("Searching for warm runners");
-
-  // Describe all instances
-  const instancesData = await client.send(command);
-
-  // Find the first stopped instance in the Auto Scaling group
-  core.info(`Found ${instancesData.Reservations.length} Instances`);
-
-  if (instancesData.Reservations.length == 0 ||
-    instancesData.Reservations[0].Instances.length == 0) {
-    core.warning("No Stopped Instance Found");
-    return null;
-  }
-
-  // Get a random index as a quick fix to avoid simultaneous jobs
-  const idx = Math.floor(Math.random() * instancesData.Reservations.length);
-  const idx2 = Math.floor(Math.random() * instancesData.Reservations[idx].Instances.length);
-
-  const instanceToStart = instancesData.Reservations[idx].Instances[idx2].InstanceId;
-  core.info(`Found Stopped Instance: ${instanceToStart}`);
-
-  // Add the runId Tag
-  core.info(`Adding RunId as tag ${runId}`);
-  await client.send(
-    new CreateTagsCommand({
-      Resources: [instanceToStart],
-      Tags: [
-        {
-          Key: "runId",
-          Value: runId,
-        },
-      ],
-    })
-  );
-
-  // Create Start Command
-  const startCommand = new StartInstancesCommand({
-    InstanceIds: [instanceToStart]
-  });
-
-  core.info(`Starting Instance`);
-  await client.send(startCommand);
-
-
-  return instanceToStart;
-}
-
 module.exports = {
   startEc2Instance,
   terminateEc2Instance,
   waitForInstanceRunning,
-  startStoppedInstanceInAutoScalingGroup,
-  getLaunchTemplateFromASG,
-  startRunnerCommand
 };

@@ -31,13 +31,13 @@ async function getRegistrationToken() {
   }
 }
 
-async function removeRunner(runnerLabel) {
-  const runner = await getRunner(runnerLabel);
+async function removeRunner() {
+  const runner = await getRunner(config.input.label);
   const octokit = github.getOctokit(config.input.githubToken);
 
   // skip the runner removal process if the runner is not found
   if (!runner) {
-    core.info(`GitHub self-hosted runner with label ${runnerLabel} is not found, so the removal is skipped`);
+    core.info(`GitHub self-hosted runner with label ${config.input.label} is not found, so the removal is skipped`);
     return;
   }
 
@@ -53,7 +53,7 @@ async function removeRunner(runnerLabel) {
 async function waitForRunnerRegistered(label) {
   const timeoutMinutes = 10;
   const retryIntervalSeconds = 10;
-  const quietPeriodSeconds = 0;
+  const quietPeriodSeconds = 30;
   let waitSeconds = 0;
 
   core.info(`Waiting ${quietPeriodSeconds}s for the AWS EC2 instance to be registered in GitHub as a new self-hosted runner`);
