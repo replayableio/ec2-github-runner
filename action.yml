@@ -84,6 +84,14 @@ inputs:
     description: >-
       Availability zone of the dedicated host, required for start and mac
     required: false
+  use-docker:
+    description: >-
+      If specified, will spin up a Linux instance to run Docker commands before starting the Windows runner
+    required: false
+  docker-commands:
+    description: >-
+      Commands to run in the Linux Docker instance. Only used if use-docker is true.
+    required: false
 
 outputs:
   label:
@@ -96,6 +104,10 @@ outputs:
     description: >-
       EC2 Instance Id of the created runner.
       The id is used to terminate the EC2 instance when the runner is not needed anymore.
+  linux-private-ip:
+    description: >-
+      Private IP address of the Linux instance when use-docker is enabled.
+      Can be used to connect to services running on the Linux instance.
 runs:
   using: node16
   main: ./dist/index.js

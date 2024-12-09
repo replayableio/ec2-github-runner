@@ -18,6 +18,8 @@ class Config {
       awsKeyPairName: core.getInput('aws-key-pair-name'),
       preRunnerScript: core.getInput('pre-runner-script'),
       availabilityZone: core.getInput('availability-zone'),
+      useDocker: core.getInput('use-docker') === 'true',
+      dockerCommands: core.getInput('docker-commands'),
     };
 
     const tags = JSON.parse(core.getInput('aws-resource-tags'));
@@ -36,6 +38,9 @@ class Config {
       owner: github.context.repo.owner,
       repo: github.context.repo.repo,
     };
+
+    // Store Linux instance ID for cleanup
+    this.linuxInstanceId = null;
 
     //
     // validate input
