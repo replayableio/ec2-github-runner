@@ -1,0 +1,96 @@
+name: EC2 GitHub Runner Workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Branch to run on'
+        required: true
+        default: 'tarun/linux-docker'
+        type: string
+      mode:
+        description: 'Mode (start/stop)'
+        required: true
+        type: choice
+        options:
+          - start
+          - stop
+      ec2-image-id:
+        description: 'EC2 Image ID (AMI)'
+        required: false
+      ec2-instance-type:
+        description: 'EC2 Instance Type'
+        required: false
+      ec2-os:
+        description: 'OS Type (windows/mac)'
+        required: false
+        default: 'windows'
+      subnet-id:
+        description: 'VPC Subnet ID'
+        required: false
+      security-group-id:
+        description: 'Security Group ID'
+        required: false
+      label:
+        description: 'Runner Label'
+        required: false
+      ec2-instance-id:
+        description: 'EC2 Instance ID (for stop mode)'
+        required: false
+      iam-role-name:
+        description: 'IAM Role Name'
+        required: false
+      aws-resource-tags:
+        description: 'AWS Resource Tags (JSON array)'
+        required: false
+        default: '[]'
+      runner-home-dir:
+        description: 'Runner Home Directory'
+        required: false
+      aws-key-pair-name:
+        description: 'AWS Key Pair Name'
+        required: false
+      pre-runner-script:
+        description: 'Pre-runner Script'
+        required: false
+      availability-zone:
+        description: 'Availability Zone'
+        required: false
+      use-docker:
+        description: 'Use Docker'
+        required: false
+        type: boolean
+      docker-commands:
+        description: 'Docker Commands'
+        required: false
+
+jobs:
+  manage-runner:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          
+      - name: Manage EC2 Runner
+        uses: machulav/ec2-github-runner@v2
+        with:
+          mode: ${{ github.event.inputs.mode }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          ec2-image-id: ${{ github.event.inputs.ec2-image-id }}
+          ec2-instance-type: ${{ github.event.inputs.ec2-instance-type }}
+          subnet-id: ${{ github.event.inputs.subnet-id }}
+          security-group-id: ${{ github.event.inputs.security-group-id }}
+          label: ${{ github.event.inputs.label }}
+          ec2-instance-id: ${{ github.event.inputs.ec2-instance-id }}
+          iam-role-name: ${{ github.event.inputs.iam-role-name }}
+          aws-resource-tags: ${{ github.event.inputs.aws-resource-tags }}
+          runner-home-dir: ${{ github.event.inputs.runner-home-dir }}
+          pre-runner-script: ${{ github.event.inputs.pre-runner-script }}
+          use-docker: ${{ github.event.inputs.use-docker }}
+          docker-commands: ${{ github.event.inputs.docker-commands }}

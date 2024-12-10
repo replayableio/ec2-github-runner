@@ -151,8 +151,8 @@ async function startEc2Instance(label, githubRegistrationToken) {
     // Replace localhost placeholder with private IP in preRunnerScript
     if (config.input.preRunnerScript) {
       config.input.preRunnerScript = config.input.preRunnerScript.replace(
-        /\${{ env.LOCALHOST }}/g,
-        `http://${privateIp}:8744`
+        /\${{ env.LINUX_PRIVATE_IP }}/g,
+        `http://${privateIp}`
       );
     }
   }
