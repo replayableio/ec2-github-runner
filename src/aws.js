@@ -90,47 +90,30 @@ function buildUserDataScript(githubRegistrationToken, label, privateIp = null) {
   }
 }
 
+// Modify startLinuxInstance to use existing instance
 async function startLinuxInstance(dockerCommands) {
   const client = new EC2Client();
   
-  const userData = [
-    '#!/bin/bash',
-    'yum update -y',
-    'yum install -y docker',
-    'service docker start',
-    'systemctl enable docker',
-    ...dockerCommands.split('\n')
-  ];
-
-  const params = {
-    ImageId: 'ami-0cff7528ff583bf9a', // Amazon Linux 2 AMI - adjust as needed
-    InstanceType: 't2.micro',
-    MinCount: 1,
-    MaxCount: 1,
-    UserData: Buffer.from(userData.join('\n')).toString('base64'),
-    SecurityGroupIds: [config.input.securityGroupId],
-    SubnetId: config.input.subnetId
+  // Get existing instance's private IP
+  const describeParams = {
+    InstanceIds: ['i-0797fe118164af378'] // Using your existing instance ID
   };
-
+  
   try {
-    const result = await client.send(new RunInstancesCommand(params));
-    const ec2InstanceId = result.Instances[0].InstanceId;
-    await waitForInstanceRunning(ec2InstanceId);
-    
-    // Get private IP
-    const describeParams = {
-      InstanceIds: [ec2InstanceId]
-    };
     const describeResult = await client.send(new DescribeInstancesCommand(describeParams));
     const privateIp = describeResult.Reservations[0].Instances[0].PrivateIpAddress;
     
-    core.info(`Linux instance ${ec2InstanceId} started with private IP ${privateIp}`);
+    // Execute docker commands on existing instance
+    // Note: You'll need to implement the actual command execution
+    // This could be done via SSM, SSH, or other remote execution method
+    core.info(`Using existing Linux instance i-0797fe118164af378 with private IP ${privateIp}`);
+    
     return {
-      instanceId: ec2InstanceId,
+      instanceId: 'i-0797fe118164af378',
       privateIp: privateIp
     };
   } catch (error) {
-    core.error('Error starting Linux instance');
+    core.error('Error getting Linux instance details');
     throw error;
   }
 }
@@ -227,6 +210,7 @@ async function startEc2Instance(label, githubRegistrationToken) {
   }
 }
 
+// Modify terminateEc2Instance to skip Linux instance termination
 async function terminateEc2Instance() {
   const client = new EC2Client();
 
@@ -244,19 +228,7 @@ async function terminateEc2Instance() {
     throw error;
   }
 
-  if (config.input.useDocker && config.linuxInstanceId) {
-    const params = {
-      InstanceIds: [config.linuxInstanceId],
-    };
-    
-    try {
-      await client.send(new TerminateInstancesCommand(params));
-      core.info(`Linux instance ${config.linuxInstanceId} terminated`);
-    } catch (error) {
-      core.error(`Error terminating Linux instance ${config.linuxInstanceId}`);
-      throw error;
-    }
-  }
+  // Removed Linux instance termination code
 }
 
 async function waitForInstanceRunning(ec2InstanceId) {
